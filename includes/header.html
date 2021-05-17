@@ -1,0 +1,117 @@
+<?php 
+/* Starts HTML template, encoding using header(), starts session, retrieves language-specific words, creates language list
+ */
+
+// Encoding
+header('Content-Type: text/html; charset=UTF-8');
+
+// Start session
+session_start();
+
+// For testing purposes, until I included user registration/login capabilities
+$_SESSION['user_id'] = 1;
+$_SESSION['user_tz'] = 'America/New_York';
+
+// For logging out:
+//$_SESSION = [];
+
+// DB connection
+require('mysqli_connect.php');
+
+// Check new language ID & store in session
+if (isset($_GET['lid']) &&
+    filter_var($_GET['lid'], FILTER_VALIDATE_INT, array('min_range' => 1))
+    ) {
+    $_SESSION['lid'] = $_GET['lid'];
+} elseif (!isset($_SESSION['lid'])) {
+    $_SESSION['lid'] = 1; // Default (English)
+}
+
+// Get language words
+$q = "SELECT * FROM words WHERE lang_id = {$_SESSION['lid']}";
+$r = mysqli_query($dbc, $q);
+if (mysqli_num_rows($r) == 0) { // Invalid language ID
+
+    // Default language
+    $_SESSION['lid'] = 1; // Default
+    $q = "SELECT * FROM words WHERE lang_id = {$_SESSION['lid']}";
+    $r = mysqli_query($dbc, $q);
+
+}
+
+// Fetch results into variable
+$words = mysqli_fetch_array($r, MYSQLI_ASSOC);
+
+// Free the results
+mysqli_free_result($r);
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title><?php echo $words['title']; ?></title>
+    <link rel="stylesheet" href="./includes/bootstrap.min.css">
+    <style type="text/css">
+.starter-template {
+  padding: 40px 15px;
+  text-align: left;
+}
+</style>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+            <a class="navbar-brand" href="index.php">Venzo Message Board</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+
+<?php // Display links
+
+// Default links
+echo '<li class="nav-item"><a href="forum.php" class="nav-link">' . $words['forum_home'] . '</a></li>';
+
+// Display links based on login status
+if (isset($_SESSION['user_id'])) {
+
+    // On forum page, add new threads link
+    if (basename($_SERVER['PHP_SELF']) == 'forum.php') {
+        echo '<li class="nav-item"><a href="post.php" class="nav-link">' . $words['new_thread'] . '</a></li>';
+    }
+
+    // Search link
+    echo '<li class="nav-item"><a href="search.php" class="nav-link">' . $words['search'] . '</a></li>';
+
+} else {
+
+    // Register and login links once I add capabilites
+     echo '<!-- <li><a href="register.php">' . $words['register'] . '</a></li>
+    <li><a href="login.php">' . $words['login'] . '</a></li> -->';
+}
+
+// Retrieve all languages
+echo '<li class="nav-item dropdown"><a href="forum.php" class="nav-link dropdown-toggle" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">' . $words['language'] . ' <span class="caret"></span></a>
+<ul class="dropdown-menu" aria-labelledby="navbarDropdown">';
+
+$q = "SELECT lang_id, lang FROM languages ORDER BY lang_eng ASC";
+$r = mysqli_query($dbc, $q);
+if (mysqli_num_rows($r) > 0) {
+  while ($menu_row = mysqli_fetch_array($r, MYSQLI_NUM)) {
+    echo '<li><a class="dropdown-item" href="forum.php?lid=' . $menu_row[0] . '">' . $menu_row[1] . '</a></li>';
+  }
+}
+mysqli_free_result($r);
+?>
+                </ul></li>
+            </ul>
+        </div><!-- navbar -->
+    </div><!-- container -->
+</nav>
+
+<div class="container-fluid" style="margin-top: 20px;">
+  
